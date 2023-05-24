@@ -110,12 +110,12 @@ private:
     }
 
     // to get a deleted position in a specific file for using
-    int getInsertPos(fvector& f, node_type T) {
+    int getInsertPos(fvector& f, node_type type) {
         int count, pos;
         f.seekg(std::ios::beg);
         f.read((char*)&count, INT);
         if (!count) {
-            switch (T) {
+            switch (type) {
             case tree_node:
                 last_t += NODE_TREE;
                 return last_t - NODE_TREE;
@@ -159,10 +159,10 @@ private:
     }
 
     // to update parent-son relationship between prev and cur among data nodes
-    void updateDataNode(std::fstream& f, int prev, int cur, insert_type T = to_key) {
+    void updateDataNode(std::fstream& f, int prev, int cur, insert_type type = to_key) {
         int next, num_of_int = 0;
 
-        switch (T) {
+        switch (type) {
         case to_key: num_of_int = 2; break;
         case to_value: num_of_int = 3; break;
         }
@@ -775,7 +775,7 @@ private:
                     f.seekp(end + 3 * INT + KEY, std::ios::beg);
                     f.write((char*)&right_d, INT);
                     f.seekp(right_d, std::ios::beg);
-                    f.write((char*)nega_one, INT);
+                    f.write((char*)&nega_one, INT);
                     f.write((char*)&end, INT);
                     f.write((char*)&temp, KEY);
                     f.write((char*)&nega_one, INT);
