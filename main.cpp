@@ -47,7 +47,7 @@ struct String {
 int main() {
     // freopen("5.in","r",stdin);
     // freopen("me.out","w",stdout);
-    BPTree<String, int, 4, 4> bpTree("test");
+    BPTree<String, int> bpTree("test");
     std::pair<String, int> val;
     int cnt;
     char cmd[10];
