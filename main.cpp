@@ -1,4 +1,3 @@
-﻿#define _CRT_SECURE_NO_WARNINGS
 #include <iostream>
 #include <cstdio>
 #include <cstring>
@@ -9,7 +8,7 @@ struct String {
     char index[65];
 
     String(const String& other) {
-        for (int i = 0; i < 65; i++)index[i] = other.index[i];
+        for (int i = 0; i < 65; i++) index[i] = other.index[i];
     }
 
     String() = default;
@@ -45,32 +44,35 @@ struct String {
 };
 
 int main() {
-    // freopen("5.in","r",stdin);
-    // freopen("me.out","w",stdout);
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(0); std::cout.tie(0);
+
     BPTree<String, int> bpTree("test");
     std::pair<String, int> val;
     int cnt;
     char cmd[10];
-    scanf("%d", &cnt);
+    std::cin >> cnt;
+
     for (int i = 1; i <= cnt; i++) {
-        scanf("%s", cmd);
+        std::cin >> cmd;
         if (cmd[0] == 'i') {
-            scanf("%s%d", val.first.index, &val.second);
+            std::cin >> val.first.index >> val.second;
             bpTree.insert(val);
         }
         else if (cmd[0] == 'f') {
-            scanf("%s", val.first.index);
+            std::cin >> val.first.index;
             sjtu::vector<int> ans = bpTree.Find(val.first);
             if (!ans.empty()) {
-                for (int i = 0; i < ans.size() - 1; i++) printf("%d ", ans[i]);
-                printf("%d\n", ans[ans.size() - 1]);
+                for (int i = 0; i < ans.size() - 1; i++) std::cout << ans[i] << ' ';
+                std::cout << ans[ans.size() - 1] << std::endl;
             }
             else puts("null");
         }
         else if (cmd[0] == 'd') {
-            scanf("%s%d", val.first.index, &val.second);
+            std::cin >> val.first.index >> val.second;
             bpTree.remove(val);
         }
+        //bpTree.print();
     }
     return 0;
 }
