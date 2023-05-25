@@ -1,7 +1,7 @@
 #ifndef BPTREE_HPP_BPTREE2_HPP
 #define BPTREE_HPP_BPTREE2_HPP
 #include <fstream>
-#include <iostream>
+//#include <iostream>
 //#include <queue>
 #include "vector.hpp"
 template <class Key, class T, int M = 100, int L = 100>
@@ -25,21 +25,19 @@ private:
     |__________|    |________|    |________|    |__________|
 
     node of tree: (size: 4 int and 1 Key in total)
-     _________      __________      _________      _________      ___________
-    |         |    |          |    |         |    |         |    |           |
-    |  count  | -> |  parent  | -> |   key   | -> | pointer | -> | next node | -> ...
-    |_________|    |__________|    |_________|    |_________|    |___________|
+     _________      __________      _________      ___________      _________
+    |         |    |          |    |         |    |           |    |         |
+    |  count  | -> |  parent  | -> |  value  | -> | next node | -> | pointer | -> ...
+    |_________|    |__________|    |_________|    |___________|    |_________|
 
     in node of tree, each piece of tree_node needs a head node, with an empty key
 
     data_node: (size: 4 int and 1 Value in total)
-     _________      __________      _________      __________      __________
-    |         |    |          |    |         |    |          |    |          |
-    |  count  | -> |  parent  | -> |  value  | -> | next key | -> | next val | -> ...
-    |_________|    |__________|    |_________|    |__________|    |__________|
+     _________      __________      _________      __________      _____________
+    |         |    |          |    |         |    |          |    |             |
+    |  count  | -> |  parent  | -> |  value  | -> | next val | -> | next column | -> ...
+    |_________|    |__________|    |_________|    |__________|    |_____________|
 
-    in data, value can be of the same key, thus, "next val" is used to 
-        represent the next data with the same key.
     "count" is only used in the first piece of data.
 
     vector_t or vector_d:
@@ -51,21 +49,20 @@ private:
     this "file vector" is used to record the deleted position for using.
 
     initial state of root: (size: 4 int and 1 Key in total)
-     _________      __________      _________      _________      ___________
-    |  count  |    |  parent  |    |   key   |    | pointer |    | next node |
-    |    0    | -> |    -1    | -> |   NULL  | -> |    -1   | -> |     -1    | -> ...
-    |_________|    |__________|    |_________|    |_________|    |___________|
+     _________      __________      _________      ___________      _________
+    |  count  |    |  parent  |    |  value  |    | next node |    | pointer |
+    |    0    | -> |    -1    | -> |   NULL  | -> |     -1    | -> |    -1   | -> ...
+    |_________|    |__________|    |_________|    |___________|    |_________|
 
     / ********************************************************/
 
     int NODE_DATA = 4 * INT + VALUE;
-    int NODE_TREE = 4 * INT + KEY;
+    int NODE_TREE = 4 * INT + VALUE;
 
     using value_type = std::pair<Key, T>;
     using fvector = std::fstream;
 
     enum node_type { tree_node, data_node };
-    enum insert_type { to_key, to_value };
 
     Key temp_key;
     value_type temp_value;
@@ -147,6 +144,21 @@ private:
         f.write((char*)&count, INT);
     }
 
+    // three operators for comparing val_x and val_y
+    bool greater(const value_type& val_x, const value_type& val_y) {
+        return val_x.first > val_y.first || val_x.first == val_y.first 
+            && val_x.second > val_y.second;
+    }
+
+    bool equal(const value_type& val_x, const value_type& val_y) {
+        return val_x == val_y;
+    }
+
+    bool less(const value_type& val_x, const value_type& val_y) {
+        return val_x.first < val_y.first || val_x.first == val_y.first 
+            && val_x.second < val_y.second;
+    }
+
     // to get the ancestor tree_node of a specific tree_node
     // "pos" shouldn't be -1 initially
     int getTreeNodeAncestor(std::fstream& f, int pos) {
@@ -158,76 +170,42 @@ private:
         else return -count - 1;
     }
 
-    // to update parent-son relationship between prev and cur among data nodes
-    void updateDataNode(std::fstream& f, int prev, int cur, insert_type type = to_key) {
-        int next, num_of_int = 0;
-
-        switch (type) {
-        case to_key: num_of_int = 2; break;
-        case to_value: num_of_int = 3; break;
+    // to update parent-son relationship between prev and cur among nodes
+    // if next isn't given, it will be acquired from prev
+    void updateNode(std::fstream& f, int prev, int cur, int next = -2) {
+        if (next == -2) {
+            f.seekg(prev + 2 * INT + VALUE, std::ios::beg);
+            f.read((char*)&next, INT);
         }
-
-        f.seekg(prev + num_of_int * INT + VALUE, std::ios::beg);
-        f.read((char*)&next, INT);
-        f.seekp(prev + num_of_int * INT + VALUE, std::ios::beg);
+        f.seekp(prev + 2 * INT + VALUE, std::ios::beg);
         f.write((char*)&cur, INT);
 
         f.seekp(cur + INT, std::ios::beg);
         f.write((char*)&prev, INT);
-        f.seekp(cur + num_of_int * INT + VALUE, std::ios::beg);
+        f.seekp(cur + 2 * INT + VALUE, std::ios::beg);
         f.write((char*)&next, INT);
 
-        if (next != -1) {
+        if (next >= 0) {
             f.seekp(next + INT, std::ios::beg);
             f.write((char*)&cur, INT);
         }
     }
 
-    // to update parent-son relationship between prev and cur among tree nodes
-    void updateTreeNode(std::fstream& f, int prev, int cur) {
-        int next;
-
-        f.seekg(prev + 3 * INT + KEY, std::ios::beg);
-        f.read((char*)&next, INT);
-        f.seekp(prev + 3 * INT + KEY, std::ios::beg);
-        f.write((char*)&cur, INT);
-
-        f.seekp(cur + INT, std::ios::beg);
-        f.write((char*)&prev, INT);
-        f.seekp(cur + 3 * INT + KEY, std::ios::beg);
-        f.write((char*)&next, INT);
-
-        if (next != -1) {
-            f.seekp(next + INT, std::ios::beg);
-            f.write((char*)&cur, INT);
-        }
-    }
-
-    // insert a data_node to file "data", all parameters included
-    void insertDataNode(std::fstream& f, int pos, const value_type& val, 
-        int parent = -1, int next_key = -1, int next_val = -1, int count = -1) {
+    // insert a node to a specific file, all parameters included
+    void insertNode(std::fstream& f, int pos, const value_type& val,
+        int parent = -1, int count = -1, int fourth_val = -1, int fifth_val = -1) {
         f.seekp(pos, std::ios::beg);
         f.write((char*)&count, INT);
         f.write((char*)&parent, INT);
         f.write((char*)&val, VALUE);
-        f.write((char*)&next_key, INT);
-        f.write((char*)&next_val, INT);
-    }
-
-    // insert a tree_node to file "tree", all parameters included
-    void insertTreeNode(std::fstream& f, int pos, const Key& key, int pointer,
-        int parent = -1, int next_node = -1, int count = -1) {
-        f.seekg(pos, std::ios::beg);
-        f.write((char*)&count, INT);
-        f.write((char*)&parent, INT);
-        f.write((char*)&key, KEY);
-        f.write((char*)&pointer, INT);
-        f.write((char*)&next_node, INT);
+        f.write((char*)&fourth_val, INT);
+        f.write((char*)&fifth_val, INT);
     }
 
     // use the pos acquired from another operation to insert val to the data file
     void insertToData(int pos, const value_type& val) {
-        int count; file[2].seekg(pos, std::ios::beg);
+        int count;
+        file[2].seekg(pos, std::ios::beg);
         file[2].read((char*)&count, INT);
 
         int next_pos, old_pos = pos;
@@ -240,67 +218,19 @@ private:
             file[2].seekg(next_pos + 2 * INT, std::ios::beg);
             file[2].read((char*)&temp, VALUE);
 
-            // judge whether there's a value with the same key
-            if (temp.first == val.first) {
-                int first_pos = next_pos;
-
-                while (true) {
-                    if (temp.second < val.second) {
-                        old_pos = next_pos;
-                        file[2].seekg(INT, std::ios::cur);
-                        file[2].read((char*)&next_pos, INT);
-
-                        if (next_pos == -1) {
-                            int posForInsert = getInsertPos(file[4], data_node);
-                            insertDataNode(file[2], posForInsert, val);
-                            updateDataNode(file[2], old_pos, posForInsert, to_value);
-                            checkDataNode(file[2], pos);
-                            return;
-                        }
-
-                        file[2].seekg(next_pos + 2 * INT, std::ios::beg);
-                        file[2].read((char*)&temp, VALUE);
-                    }
-                    else if (temp.second == val.second) {
-                        return;
-                    }
-                    else {
-                        if (next_pos == first_pos) {
-                            int posForInsert = getInsertPos(file[4], data_node), next;
-                            file[2].seekg(next_pos + 2 * INT + VALUE, std::ios::beg);
-                            file[2].read((char*)&next, INT);
-
-                            insertDataNode(file[2], posForInsert, val, 
-                                old_pos, next, next_pos);
-
-                            file[2].seekp(old_pos + 2 * INT + VALUE, std::ios::beg);
-                            file[2].write((char*)&posForInsert, INT);
-                            if (next != -1) {
-                                file[2].seekp(next + INT, std::ios::beg);
-                                file[2].write((char*)&posForInsert, INT);
-                            }
-                            return;
-                        }
-                        else {
-                            int posForInsert = getInsertPos(file[4], data_node);
-                            insertDataNode(file[2], posForInsert, val);
-                            updateDataNode(file[2], old_pos, posForInsert, to_value);
-                            return;
-                        }
-                    }
-                }
-            }
+            // judge whether there's a same value
+            if (equal(temp, val)) return;
 
             // already find the right place
-            if (temp.first > val.first) {
+            if (greater(temp, val)) {
                 int posForInsert = getInsertPos(file[4], data_node);
-                insertDataNode(file[2], posForInsert, val);
-                updateDataNode(file[2], old_pos, posForInsert);
+                insertNode(file[2], posForInsert, val);
+                updateNode(file[2], old_pos, posForInsert);
 
                 ++Size; ++count;
                 file[2].seekp(pos, std::ios::beg);
                 file[2].write((char*)&count, INT);
-                checkDataNode(file[2], pos);
+                if (count > (L + 1) >> 1) checkDataNode(file[2], pos);
                 return;
             }
 
@@ -309,20 +239,20 @@ private:
         }
 
         // when next_pos is equal to -1
-        int posForInsert = getInsertPos(file[4], data_node);
-        file[2].seekp(old_pos + 2 * INT + VALUE, std::ios::beg);
-        file[2].write((char*)&posForInsert, INT);
+        int posForInsert = getInsertPos(file[4], data_node), next;
+        file[2].seekg(old_pos + 3 * INT + VALUE, std::ios::beg);
+        file[2].read((char*)&next, INT);
+        file[2].seekp(old_pos + 3 * INT + VALUE, std::ios::beg);
+        file[2].write((char*)&nega_one, INT);
 
-        int test;
-        file[2].seekg(old_pos + 2 * INT + VALUE, std::ios::beg);
-        file[2].read((char*)&test, INT);
+        insertNode(file[2], posForInsert, val, old_pos, -1, -1, next);
+        updateNode(file[2], old_pos, posForInsert, -1);
 
-        insertDataNode(file[2], posForInsert, val, old_pos);
-
-        ++Size; ++count; file[2].seekp(pos, std::ios::beg);
+        ++Size; ++count;
+        file[2].seekp(pos, std::ios::beg);
         file[2].write((char*)&count, INT);
 
-        checkDataNode(file[2], pos);
+        if (count > (L + 1) >> 1) checkDataNode(file[2], pos);
     }
 
     // to remove the data same as val
@@ -340,71 +270,33 @@ private:
             file[2].seekg(cur + 2 * INT, std::ios::beg);
             file[2].read((char*)&temp, VALUE);
 
-            if (temp.first == val.first && temp.second == val.second) {
-                int next_val, next_key;
+            if (equal(temp, val)) {
+                int next_val, next_col;
                 file[2].seekg(cur + 2 * INT + VALUE, std::ios::beg);
-                file[2].read((char*)&next_key, INT);
                 file[2].read((char*)&next_val, INT);
+                file[2].read((char*)&next_col, INT);
                 addInsertPos(file[4], cur);
 
+                file[2].seekp(old_pos + 2 * INT + VALUE, std::ios::beg);
+                file[2].write((char*)&next_val, INT);
+
                 if (next_val == -1) {
-                    file[2].seekp(old_pos + 2 * INT + VALUE, std::ios::beg);
-                    file[2].write((char*)&next_key, INT);
-
-                    if (next_key != -1) {
-                        file[2].seekp(next_key + INT, std::ios::beg);
-                        file[2].write((char*)&old_pos, INT);
-                    }
-
-                    --count; --Size;
-                    file[2].seekp(pos, std::ios::beg);
-                    file[2].write((char*)&count, INT);
-
-                    checkDataNode(file[2], pos);
-                    return;
+                    file[2].write((char*)&next_col, INT);
                 }
                 else {
-                    file[2].seekp(old_pos + 2 * INT + VALUE, std::ios::beg);
-                    file[2].write((char*)&next_key, INT);
-                    updateDataNode(file[2], old_pos, next_val, to_key);
-                    return;
+                    file[2].seekp(next_val + INT, std::ios::beg);
+                    file[2].write((char*)&old_pos, INT);
                 }
-            }
 
-            if (temp.first == val.first) {
-                old_pos = cur;
-                file[2].seekg(cur + 3 * INT + VALUE, std::ios::beg);
-                file[2].read((char*)&cur, INT);
+                --count; --Size;
+                file[2].seekp(pos, std::ios::beg);
+                file[2].write((char*)&count, INT);
 
-                while (cur != -1) {
-                    file[2].seekg(cur + 2 * INT, std::ios::beg);
-                    file[2].read((char*)&temp, VALUE);
-
-                    if (temp.second == val.second) {
-                        addInsertPos(file[4], cur);
-
-                        int next_val;
-                        file[2].seekg(INT, std::ios::cur);
-                        file[2].read((char*)&next_val, INT);
-                        file[2].seekp(old_pos + 3 * INT + VALUE, std::ios::beg);
-                        file[2].write((char*)&next_val, INT);
-
-                        if (next_val != -1) {
-                            file[2].seekp(next_val + INT, std::ios::beg);
-                            file[2].write((char*)&old_pos, INT);
-                        }
-                        return;
-                    }
-                    if (temp.second > val.second) return;
-
-                    old_pos = cur;
-                    file[2].seekg(cur + 3 * INT + VALUE, std::ios::beg);
-                    file[2].read((char*)&cur, INT);
-                }
+                checkDataNode(file[2], pos);
                 return;
             }
 
-            if (temp.first > val.first) return;
+            if (greater(temp, val)) return;
 
             old_pos = cur;
             file[2].seekg(cur + 2 * INT + VALUE, std::ios::beg);
@@ -414,72 +306,85 @@ private:
 
     // to find all the value with the samw key, return a sorted vector
     sjtu::vector<T> findValue(int pos, const Key& key) {
-        sjtu::vector<T> vec; int cur;
+        // the pointers of the last tree_nodes pointing at data are set to be negative
+        if (pos < 0) {
+            pos = -pos - 1;
+            sjtu::vector<T> vec;
+            int cur = pos, old = pos; value_type temp;
 
-        file[2].seekg(pos + 2 * INT + VALUE, std::ios::beg);
-        file[2].read((char*)&cur, INT);
-
-        value_type temp;
-        while (cur != -1) {
-            file[2].seekg(cur + 2 * INT, std::ios::beg);
-            file[2].read((char*)&temp, VALUE);
-            file[2].read((char*)&cur, INT);
-
-            if (temp.first == key) {
-                vec.push_back(temp.second);
+            while (old != -1) {
+                old = cur;
+                file[2].seekg(cur + 2 * INT + VALUE, std::ios::beg);
                 file[2].read((char*)&cur, INT);
 
-                while (cur != -1) {
-                    file[2].seekg(cur + 2 * INT, std::ios::beg);
-                    file[2].read((char*)&temp, VALUE);
-                    vec.push_back(temp.second);
-
-                    file[2].seekg(INT, std::ios::cur);
+                if (cur == -1) {
+                    file[2].seekg(old + 3 * INT + VALUE, std::ios::beg);
                     file[2].read((char*)&cur, INT);
+                    if ((old = cur) == -1) return vec;
+                    continue;
                 }
 
-                //vec.sort();
-                return vec;
+                file[2].seekg(cur + 2 * INT, std::ios::beg);
+                file[2].read((char*)&temp, VALUE);
+
+                if (temp.first == key) {
+                    vec.push_back(temp.second);
+                }
+                else if (temp.first > key) return vec;
             }
 
-            if (temp.first > key) return vec;
+            return vec;
         }
-        return vec;
+
+        int next_pos, old_pos = pos;
+        file[1].seekg(pos + 2 * INT + VALUE, std::ios::beg);
+        file[1].read((char*)&next_pos, INT);
+
+        while (next_pos != -1) {
+            value_type cur;
+            file[1].seekg(next_pos + 2 * INT, std::ios::beg);
+            file[1].read((char*)&cur, VALUE);
+            if (cur.first >= key) break;
+
+            old_pos = next_pos;
+            file[1].read((char*)&next_pos, INT);
+        }
+
+        int next_find_pos;
+        file[1].seekg(old_pos + 3 * INT + VALUE, std::ios::beg);
+        file[1].read((char*)&next_find_pos, INT);
+        return findValue(next_find_pos, key);
     }
 
     // to find the right place to perform an operation
     int findInTree(int pos, const value_type& val) {
         // the pointers of the last tree_nodes pointing at data are set to be negative
-        if (pos < 0) {
-            return -pos - 1;
-        }
+        if (pos < 0) return -pos - 1;
 
         int next_pos, old_pos = pos;
-        file[1].seekg(pos + 3 * INT + KEY, std::ios::beg);
+        file[1].seekg(pos + 2 * INT + VALUE, std::ios::beg);
         file[1].read((char*)&next_pos, INT);
 
         while (next_pos != -1) {
-            Key cur;
+            value_type cur;
             file[1].seekg(next_pos + 2 * INT, std::ios::beg);
-            file[1].read((char*)&cur, KEY);
-            if (cur > val.first) {
-                break;
-            }
+            file[1].read((char*)&cur, VALUE);
+            if (greater(cur, val)) break;
 
             old_pos = next_pos;
-            file[1].seekg(INT, std::ios::cur);
             file[1].read((char*)&next_pos, INT);
         }
 
         int next_find_pos;
-        file[1].seekg(old_pos + 2 * INT + KEY, std::ios::beg);
+        file[1].seekg(old_pos + 3 * INT + VALUE, std::ios::beg);
         file[1].read((char*)&next_find_pos, INT);
         return findInTree(next_find_pos, val);
     }
     
     // combine the adjacent data nodes
     void checkDataNode(std::fstream& f, int pos) {
-        int count, parent; f.seekg(pos, std::ios::beg);
+        int count, parent;
+        f.seekg(pos, std::ios::beg);
         f.read((char*)&count, INT);
         f.read((char*)&parent, INT);
 
@@ -494,17 +399,19 @@ private:
                 f.read((char*)&curPos, INT);
             }
 
+            // create head_node for the second node
+            int head = getInsertPos(file[4], data_node);
+            int posForInserted = getInsertPos(file[3], tree_node);
+            insertNode(f, head, value_type(Key(), T()), posForInserted, 
+                count - splitPos, curPos, -1);
+            f.seekp(curPos + INT, std::ios::beg);
+            f.write((char*)&head, INT);
+
             // split the node into two, setting their "count"s
             f.seekp(pos, std::ios::beg);
             f.write((char*)&splitPos, INT);
             f.seekp(oldPos + 2 * INT + VALUE, std::ios::beg);
             f.write((char*)&nega_one, INT);
-
-            // create head_node for the second node
-            int head = getInsertPos(file[4], data_node);
-            insertDataNode(f, head, value_type(Key(), T()), 
-                -1, curPos, -1, count - splitPos);
-            f.seekp(curPos + INT, std::ios::beg);
             f.write((char*)&head, INT);
 
             // get the key to insert to the parent node
@@ -513,14 +420,10 @@ private:
             f.read((char*)&value, VALUE);
 
             // insert operation
-            int posForInserted = getInsertPos(file[3], tree_node);
             int ancestor = getTreeNodeAncestor(file[1], parent);
-            insertTreeNode(file[1], posForInserted, value.first, 
-                -head - 1, -1, -1, -ancestor - 1);
-            updateTreeNode(file[1], parent, posForInserted);
-
-            f.seekp(head + INT, std::ios::beg);
-            f.write((char*)&posForInserted, INT);
+            insertNode(file[1], posForInserted, value, -1, 
+                -ancestor - 1, -1, -head - 1);
+            updateNode(file[1], parent, posForInserted);
 
             int cnt;
             file[1].seekg(ancestor, std::ios::beg);
@@ -536,7 +439,7 @@ private:
             int left_p, right_p, left_d, right_d;
             file[1].seekg(parent + INT, std::ios::beg);
             file[1].read((char*)&left_p, INT);
-            file[1].seekg(INT + KEY, std::ios::cur);
+            file[1].seekg(VALUE, std::ios::cur);
             file[1].read((char*)&right_p, INT);
 
             if (right_p != -1) {
@@ -548,7 +451,7 @@ private:
                     f.read((char*)&p, INT);
                 }
 
-                file[1].seekg(right_p + 2 * INT + KEY, std::ios::beg);
+                file[1].seekg(right_p + 3 * INT + VALUE, std::ios::beg);
                 file[1].read((char*)&right_d, INT);
                 right_d = -right_d - 1;
 
@@ -566,20 +469,18 @@ private:
                     f.read((char*)&second, INT);
                     f.seekg(second + 2 * INT, std::ios::beg);
                     f.read((char*)&temp, VALUE);
-                    Key second_key(temp.first);
 
                     --right_count;
                     f.seekp(right_d, std::ios::beg);
                     f.write((char*)&right_count, INT);
                     f.seekp(INT + VALUE, std::ios::cur);
                     f.write((char*)&second, INT);
+                    f.seekp(second + INT, std::ios::beg);
+                    f.write((char*)&right_d, INT);
 
                     ++count;
                     f.seekp(pos, std::ios::beg);
                     f.write((char*)&count, INT);
-
-                    f.seekp(second + INT, std::ios::beg);
-                    f.write((char*)&right_d, INT);
 
                     f.seekp(end + 2 * INT + VALUE, std::ios::beg);
                     f.write((char*)&first, INT);
@@ -587,18 +488,19 @@ private:
                     f.write((char*)&end, INT);
                     f.seekp(VALUE, std::ios::cur);
                     f.write((char*)&nega_one, INT);
+                    f.write((char*)&right_d, INT);
 
                     file[1].seekp(right_p + 2 * INT, std::ios::beg);
-                    file[1].write((char*)&second_key, KEY);
+                    file[1].write((char*)&temp, VALUE);
                     return;
                 }
                 else {
                     int next_node, parent_count;
-                    file[1].seekg(right_p + 3 * INT + KEY, std::ios::beg);
+                    file[1].seekg(right_p + 2 * INT + VALUE, std::ios::beg);
                     file[1].read((char*)&next_node, INT);
                     addInsertPos(file[3], right_p);
 
-                    file[1].seekp(parent + 3 * INT + KEY, std::ios::beg);
+                    file[1].seekp(parent + 2 * INT + VALUE, std::ios::beg);
                     file[1].write((char*)&next_node, INT);
 
                     if (next_node != -1) {
@@ -619,6 +521,7 @@ private:
 
                     f.seekp(end + 2 * INT + VALUE, std::ios::beg);
                     f.write((char*)&first, INT);
+                    f.write((char*)&nega_one, INT);
                     f.seekp(first + INT, std::ios::beg);
                     f.write((char*)&end, INT);
 
@@ -633,7 +536,7 @@ private:
                 }
             }
             else if (left_p != -1) {
-                file[1].seekg(left_p + 2 * INT + KEY, std::ios::beg);
+                file[1].seekg(left_p + 3 * INT + VALUE, std::ios::beg);
                 file[1].read((char*)&left_d, INT);
                 left_d = -left_d - 1;
 
@@ -652,8 +555,12 @@ private:
                 if (left_count > splitPos) {
                     f.seekg(end + INT, std::ios::beg);
                     f.read((char*)&p, INT);
+                    f.seekp(end + 3 * INT + VALUE, std::ios::beg);
+                    f.write((char*)&nega_one, INT);
+
                     f.seekp(p + 2 * INT + VALUE, std::ios::beg);
                     f.write((char*)&nega_one, INT);
+                    f.write((char*)&pos, INT);
 
                     --left_count;
                     f.seekp(left_d, std::ios::beg);
@@ -663,20 +570,19 @@ private:
                     f.seekp(pos, std::ios::beg);
                     f.write((char*)&count, INT);
 
-                    updateDataNode(file[2], pos, end, to_key);
+                    updateNode(file[2], pos, end);
 
                     value_type temp;
                     f.seekg(end + 2 * INT, std::ios::beg);
                     f.read((char*)&temp, VALUE);
-                    Key new_key(temp.first);
 
                     file[1].seekp(parent + 2 * INT, std::ios::beg);
-                    file[1].write((char*)&new_key, KEY);
+                    file[1].write((char*)&temp, VALUE);
                     return;
                 }
                 else {
                     addInsertPos(file[3], parent);
-                    file[1].seekp(left_p + 3 * INT + KEY, std::ios::beg);
+                    file[1].seekp(left_p + 2 * INT + VALUE, std::ios::beg);
                     file[1].write((char*)&nega_one, INT);
 
                     int ancestor = getTreeNodeAncestor(file[1], left_p), parent_count;
@@ -692,6 +598,7 @@ private:
 
                     f.seekp(end + 2 * INT + VALUE, std::ios::beg);
                     f.write((char*)&first, INT);
+                    f.write((char*)&nega_one, INT);
                     f.seekp(first + INT, std::ios::beg);
                     f.write((char*)&end, INT);
 
@@ -721,13 +628,13 @@ private:
         if (count > M) {
             for (int i = 1; i <= splitPos; ++i) {
                 oldPos = curPos;
-                f.seekg(curPos + 3 * INT + KEY, std::ios::beg);
+                f.seekg(curPos + 2 * INT + VALUE, std::ios::beg);
                 f.read((char*)&curPos, INT);
             }
             // split the node into two and set their "count"s
             f.seekp(pos, std::ios::beg);
             f.write((char*)&splitPos, INT);
-            f.seekp(oldPos + 3 * INT + KEY, std::ios::beg);
+            f.seekp(oldPos + 2 * INT + VALUE, std::ios::beg);
             f.write((char*)&nega_one, INT);
 
             f.seekp(curPos, std::ios::beg);
@@ -735,24 +642,25 @@ private:
 
             // revise parents for later use
             int p = curPos, pa = -curPos - 1;
-            f.seekg(p + 3 * INT + KEY, std::ios::beg);
+            f.seekg(p + 2 * INT + VALUE, std::ios::beg);
             f.read((char*)&p, INT);
             while (p != -1) {
                 f.seekp(p, std::ios::beg);
                 f.write((char*)&pa, INT);
-                f.seekg(p + 3 * INT + KEY, std::ios::beg);
+                f.seekg(p + 2 * INT + VALUE, std::ios::beg);
                 f.read((char*)&p, INT);
             }
 
             // get the key to be inserted to the parent node
-            Key key;
+            value_type temp;
             f.seekg(curPos + 2 * INT, std::ios::beg);
-            f.read((char*)&key, KEY);
+            f.read((char*)&temp, VALUE);
 
             // if the node to be split is the root
             if (parent == -1) {
                 parent = root = getInsertPos(file[3], tree_node);
-                insertTreeNode(file[1], parent, Key(), pos, -1, -1, 1);
+                insertNode(file[1], parent, value_type(Key(), T()), 
+                    -1, 1, -1, pos);
                 f.seekg(pos + INT, std::ios::beg);
                 f.write((char*)&parent, INT);
             }
@@ -760,9 +668,9 @@ private:
             // insert operation
             int posForInserted = getInsertPos(file[3], tree_node);
             int ancestor = getTreeNodeAncestor(file[1], parent);
-            insertTreeNode(file[1], posForInserted, key, 
-                curPos, -1, -1, -ancestor - 1);
-            updateTreeNode(file[1], parent, posForInserted);
+            insertNode(file[1], posForInserted, temp, -1,
+                -ancestor - 1, -1, curPos);
+            updateNode(file[1], parent, posForInserted);
 
             f.seekp(curPos + INT, std::ios::beg);
             f.write((char*)&posForInserted, INT);
@@ -781,7 +689,7 @@ private:
             int left_p, right_p, left_d, right_d;
             f.seekg(parent + INT, std::ios::beg);
             f.read((char*)&left_p, INT);
-            f.seekg(INT + KEY, std::ios::cur);
+            f.seekg(VALUE, std::ios::cur);
             f.read((char*)&right_p, INT);
 
             if (right_p != -1) {
@@ -789,11 +697,11 @@ private:
                 int end, p = pos;
                 while (p != -1) {
                     end = p;
-                    f.seekg(p + 3 * INT + KEY, std::ios::beg);
+                    f.seekg(p + 2 * INT + VALUE, std::ios::beg);
                     f.read((char*)&p, INT);
                 }
 
-                f.seekg(right_p + 2 * INT + KEY, std::ios::beg);
+                f.seekg(right_p + 3 * INT + VALUE, std::ios::beg);
                 f.read((char*)&right_d, INT);
 
                 int right_count;
@@ -802,7 +710,7 @@ private:
 
                 if (right_count > splitPos) {
                     int first;
-                    f.seekg(right_d + 3 * INT + KEY, std::ios::beg);
+                    f.seekg(right_d + 2 * INT + VALUE, std::ios::beg);
                     f.read((char*)&first, INT);
 
                     --right_count;
@@ -814,40 +722,41 @@ private:
                     f.seekp(pos, std::ios::beg);
                     f.write((char*)&count, INT);
 
-                    Key temp;
+                    value_type temp;
                     f.seekg(first + 2 * INT, std::ios::beg);
-                    f.read((char*)&temp, KEY);
+                    f.read((char*)&temp, VALUE);
                     f.seekp(right_p + 2 * INT, std::ios::beg);
-                    f.write((char*)&temp, KEY);
+                    f.write((char*)&temp, VALUE);
+                    f.seekp(INT, std::ios::cur);
                     f.write((char*)&first, INT);
 
                     int pa = -pos - 1;
-                    f.seekp(end + 3 * INT + KEY, std::ios::beg);
+                    f.seekp(end + 2 * INT + VALUE, std::ios::beg);
                     f.write((char*)&right_d, INT);
                     f.seekp(right_d, std::ios::beg);
                     f.write((char*)&pa, INT);
                     f.write((char*)&end, INT);
-                    f.seekp(KEY + INT, std::ios::cur);
+                    f.seekp(VALUE, std::ios::cur);
                     f.write((char*)&nega_one, INT);
 
                     int _pa = -first - 1, p;
-                    f.seekg(first + 3 * INT + KEY, std::ios::beg);
+                    f.seekg(first + 2 * INT + VALUE, std::ios::beg);
                     f.read((char*)&p, INT);
                     while (p != -1) {
                         f.seekp(p, std::ios::beg);
                         f.write((char*)&_pa, INT);
-                        f.seekg(p + 3 * INT + KEY, std::ios::beg);
+                        f.seekg(p + 2 * INT + VALUE, std::ios::beg);
                         f.read((char*)&p, INT);
                     }
                     return;
                 }
                 else {
                     int next_node, parent_count;
-                    f.seekg(right_p + 3 * INT + KEY, std::ios::beg);
+                    f.seekg(right_p + 2 * INT + VALUE, std::ios::beg);
                     f.read((char*)&next_node, INT);
                     addInsertPos(file[3], right_p);
 
-                    f.seekp(parent + 3 * INT + KEY, std::ios::beg);
+                    f.seekp(parent + 2 * INT + VALUE, std::ios::beg);
                     f.write((char*)&next_node, INT);
 
                     if (next_node != -1) {
@@ -866,13 +775,13 @@ private:
                     while (p != -1) {
                         f.seekp(p, std::ios::beg);
                         f.write((char*)&pa, INT);
-                        f.seekg(p + 3 * INT + KEY, std::ios::beg);
+                        f.seekg(p + 2 * INT + VALUE, std::ios::beg);
                         f.read((char*)&p, INT);
                     }
                     f.seekp(right_d + INT, std::ios::beg);
                     f.write((char*)&end, INT);
 
-                    f.seekp(end + 3 * INT + KEY, std::ios::beg);
+                    f.seekp(end + 2 * INT + VALUE, std::ios::beg);
                     f.write((char*)&right_d, INT);
 
                     count += right_count;
@@ -886,14 +795,14 @@ private:
                 }
             }
             else if (left_p != -1) {
-                f.seekg(left_p + 2 * INT + KEY, std::ios::beg);
+                f.seekg(left_p + 3 * INT + VALUE, std::ios::beg);
                 f.read((char*)&left_d, INT);
 
                 // find the end node among the current data_nodes
                 int p = left_d, end;
                 while (p != -1) {
                     end = p;
-                    f.seekg(p + 3 * INT + KEY, std::ios::beg);
+                    f.seekg(p + 2 * INT + VALUE, std::ios::beg);
                     f.read((char*)&p, INT);
                 }
 
@@ -904,7 +813,7 @@ private:
                 if (left_count > splitPos) {
                     f.seekg(end + INT, std::ios::beg);
                     f.read((char*)&p, INT);
-                    f.seekp(p + 3 * INT + KEY, std::ios::beg);
+                    f.seekp(p + 2 * INT + VALUE, std::ios::beg);
                     f.write((char*)&nega_one, INT);
                     --left_count; f.seekp(left_d, std::ios::beg);
                     f.write((char*)&left_count, INT);
@@ -913,15 +822,16 @@ private:
                     f.seekp(end, std::ios::beg);
                     f.write((char*)&count, INT);
                     f.write((char*)&parent, INT);
-                    f.seekp(KEY + INT, std::ios::cur);
+                    f.seekp(VALUE, std::ios::cur);
                     f.write((char*)&pos, INT);
 
-                    Key temp;
+                    value_type temp;
                     f.seekg(end + 2 * INT, std::ios::beg);
-                    f.read((char*)&temp, KEY);
+                    f.read((char*)&temp, VALUE);
 
-                    f.seekg(parent + 2 * INT, std::ios::beg);
-                    f.write((char*)&temp, KEY);
+                    f.seekp(parent + 2 * INT, std::ios::beg);
+                    f.write((char*)&temp, VALUE);
+                    f.seekp(INT, std::ios::cur);
                     f.write((char*)&end, INT);
 
                     f.seekp(pos + INT, std::ios::beg);
@@ -931,14 +841,14 @@ private:
                     while (p != -1) {
                         f.seekp(p, std::ios::beg);
                         f.write((char*)&pa, INT);
-                        f.seekg(p + 3 * INT + KEY, std::ios::beg);
+                        f.seekg(p + 2 * INT + VALUE, std::ios::beg);
                         f.read((char*)&p, INT);
                     }
                     return;
                 }
                 else {
                     addInsertPos(file[3], parent);
-                    f.seekp(left_p + 3 * INT + KEY, std::ios::beg);
+                    f.seekp(left_p + 2 * INT + VALUE, std::ios::beg);
                     f.write((char*)&nega_one, INT);
 
                     int ancestor = getTreeNodeAncestor(file[1], left_p), parent_count;
@@ -947,7 +857,7 @@ private:
                     --parent_count; f.seekp(ancestor, std::ios::beg);
                     f.write((char*)&parent_count, INT);
 
-                    f.seekp(end + 3 * INT + KEY, std::ios::beg);
+                    f.seekp(end + 2 * INT + VALUE, std::ios::beg);
                     f.write((char*)&pos, INT);
                     f.seekp(pos + INT, std::ios::beg);
                     f.write((char*)&end, INT);
@@ -956,7 +866,7 @@ private:
                     while (p != -1) {
                         f.seekp(p, std::ios::beg);
                         f.write((char*)&pa, INT);
-                        f.seekg(p + 3 * INT + KEY, std::ios::beg);
+                        f.seekg(p + 2 * INT + VALUE, std::ios::beg);
                         f.read((char*)&p, INT);
                     }
 
@@ -980,7 +890,7 @@ private:
                 f.write((char*)&parent_parent, INT);
 
                 if (parent_parent >= 0) {
-                    f.seekp(parent_parent + 2 * INT + KEY, std::ios::beg);
+                    f.seekp(parent_parent + 3 * INT + VALUE, std::ios::beg);
                     f.write((char*)&pos, INT);
                 }
                 else {
@@ -1021,7 +931,7 @@ public:
             file[1].seekp(std::ios::beg);
             file[1].write((char*)&one, INT);      // count
             file[1].write((char*)&nega_one, INT);  // parent
-            file[1].write((char*)&temp_key, KEY);  // key(NULL)
+            file[1].write((char*)&temp_value, VALUE);  // key(NULL)
             file[1].write((char*)&nega_one, INT);  // pointer
             file[1].write((char*)&nega_one, INT);  // next_node
 
@@ -1062,8 +972,7 @@ public:
     }
 
     sjtu::vector<T> Find(const Key& key) {
-        int pos = findInTree(root, value_type(key, 0));
-        return findValue(pos, key);
+        return findValue(root, key);
     }
 
     void remove(const std::pair<Key, T>& val) {
@@ -1092,7 +1001,7 @@ public:
         file[1].seekp(std::ios::beg);
         file[1].write((char*)&one, INT);      // count
         file[1].write((char*)&nega_one, INT);  // parent
-        file[1].write((char*)&temp_key, KEY);  // key(NULL)
+        file[1].write((char*)&temp_value, VALUE);  // key(NULL)
         file[1].write((char*)&nega_one, INT);  // pointer
         file[1].write((char*)&nega_one, INT);  // next_node
 
@@ -1127,7 +1036,7 @@ public:
         que.push(root);
 
         while (que.front() >= 0) {
-            Key temp;
+            value_type temp;
 
             int cur = que.front(), count;
             que.pop();
@@ -1139,11 +1048,11 @@ public:
             int next_pos = cur, pointer;
             do {
                 file[1].seekg(next_pos + 2 * INT, std::ios::beg);
-                file[1].read((char*)&temp, KEY);
-                file[1].read((char*)&pointer, INT);
+                file[1].read((char*)&temp, VALUE);
                 file[1].read((char*)&next_pos, INT);
+                file[1].read((char*)&pointer, INT);
                 que.push(pointer);
-                std::cout << temp << ' ';
+                std::cout << temp.first << '_' << temp.second << ' ';
             } while (next_pos != -1);
             std::cout << std::endl;
         }
@@ -1166,7 +1075,7 @@ public:
                     file[2].seekg(cur + 2 * INT, std::ios::beg);
                     file[2].read((char*)&temp, VALUE);
                     file[2].read((char*)&cur, INT);
-                    std::cout << temp.first << ' ';
+                    std::cout << temp.first << '_' << temp.second << ' ';
                 } while (cur != -1);
             }
             std::cout << std::endl;
