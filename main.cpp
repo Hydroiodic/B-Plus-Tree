@@ -8,7 +8,7 @@ struct String {
     char index[65];
 
     String(const String& other) {
-        for (int i = 0; i < 65; i++) index[i] = other.index[i];
+        for (int i = 0; i < 65; i++)index[i] = other.index[i];
     }
 
     String() = default;
@@ -44,35 +44,32 @@ struct String {
 };
 
 int main() {
-    std::ios::sync_with_stdio(false);
-    std::cin.tie(0); std::cout.tie(0);
-
+    // freopen("5.in","r",stdin);
+    // freopen("me.out","w",stdout);
     BPTree<String, int> bpTree("test");
     std::pair<String, int> val;
     int cnt;
     char cmd[10];
-    std::cin >> cnt;
-
+    scanf("%d", &cnt);
     for (int i = 1; i <= cnt; i++) {
-        std::cin >> cmd;
+        scanf("%s", cmd);
         if (cmd[0] == 'i') {
-            std::cin >> val.first.index >> val.second;
+            scanf("%s%d", val.first.index, &val.second);
             bpTree.insert(val);
         }
         else if (cmd[0] == 'f') {
-            std::cin >> val.first.index;
+            scanf("%s", val.first.index);
             sjtu::vector<int> ans = bpTree.Find(val.first);
             if (!ans.empty()) {
-                for (int i = 0; i < ans.size() - 1; i++) std::cout << ans[i] << ' ';
-                std::cout << ans[ans.size() - 1] << std::endl;
+                for (int i = 0; i < ans.size() - 1; i++) printf("%d ", ans[i]);
+                printf("%d\n", ans[ans.size() - 1]);
             }
             else puts("null");
         }
         else if (cmd[0] == 'd') {
-            std::cin >> val.first.index >> val.second;
+            scanf("%s%d", val.first.index, &val.second);
             bpTree.remove(val);
         }
-        //bpTree.print();
     }
     return 0;
 }
