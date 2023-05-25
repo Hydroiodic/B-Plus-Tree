@@ -2,7 +2,7 @@
 #define BPTREE_HPP_BPTREE2_HPP
 #include <fstream>
 #include <iostream>
-#include <queue>
+//#include <queue>
 #include "vector.hpp"
 template <class Key, class T, int M = 100, int L = 100>
 class BPTree {
@@ -258,7 +258,7 @@ private:
                         insertDataNode(file[2], posForInsert, val);
                         updateDataNode(file[2], old_pos, posForInsert, to_value);
                         checkDataNode(file[2], pos);
-                        updateinfo(); return;
+                        return;
                     }
 
                     file[2].seekg(next_pos + 2 * INT, std::ios::beg);
@@ -276,7 +276,7 @@ private:
                 file[2].seekp(pos, std::ios::beg);
                 file[2].write((char*)&count, INT);
                 checkDataNode(file[2], pos);
-                updateinfo(); return;
+                return;
             }
 
             old_pos = next_pos;
@@ -426,14 +426,10 @@ private:
 
     // to find the right place to perform an operation
     int findInTree(int pos, const value_type& val) {
+        // the pointers of the last tree_nodes pointing at data are set to be negative
         if (pos < 0) {
-            // the pointers of the last tree_nodes pointing at data are set to be negative
             return -pos - 1;
         }
-
-        //file[1].seekg(pos);
-        //int count; file[1].read((char*)&count, INT);
-        //int parent; file[1].read((char*)&parent, INT);
 
         int next_pos, old_pos = pos;
         file[1].seekg(pos + 3 * INT + KEY, std::ios::beg);
@@ -1028,7 +1024,8 @@ public:
         if (temp.empty()) return std::pair<bool, T>(false, T());
         else return std::pair<bool, T>(true, temp.front());
     }
-
+    
+/************************************************************* /
     void print() {
         std::cout << std::endl << Size << std::endl;
 
@@ -1079,6 +1076,8 @@ public:
             std::cout << std::endl;
         }
     }
+/ *****************************************************************/
+
 };
 
 #endif //BPTREE_HPP_BPTREE2_HPP
