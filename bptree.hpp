@@ -1,6 +1,8 @@
 #ifndef BPTREE_HPP_BPTREE2_HPP
 #define BPTREE_HPP_BPTREE2_HPP
 #include <fstream>
+#include <iostream>
+#include <queue>
 #include "vector.hpp"
 template <class Key, class T, int M = 100, int L = 100>
 class BPTree {
@@ -270,7 +272,8 @@ private:
                 insertDataNode(file[2], posForInsert, val);
                 updateDataNode(file[2], old_pos, posForInsert);
 
-                ++Size; ++count; file[2].seekp(pos, std::ios::beg);
+                ++Size; ++count;
+                file[2].seekp(pos, std::ios::beg);
                 file[2].write((char*)&count, INT);
                 checkDataNode(file[2], pos);
                 updateinfo(); return;
@@ -328,7 +331,8 @@ private:
                         file[2].write((char*)&old_pos, INT);
                     }
 
-                    --count; file[2].seekp(pos, std::ios::beg);
+                    --count; --Size;
+                    file[2].seekp(pos, std::ios::beg);
                     file[2].write((char*)&count, INT);
 
                     checkDataNode(file[2], pos); return;
@@ -370,6 +374,7 @@ private:
                     file[2].seekg(cur + 3 * INT + VALUE, std::ios::beg);
                     file[2].read((char*)&cur, INT);
                 }
+                return;
             }
 
             if (temp.first > val.first) {
@@ -478,7 +483,7 @@ private:
 
             // create head_node for the second node
             int head = getInsertPos(file[4], data_node);
-            insertDataNode(f, head, value_type(Key(), 0), 
+            insertDataNode(f, head, value_type(Key(), T()), 
                 -1, curPos, -1, count - splitPos);
             f.seekp(curPos + INT, std::ios::beg);
             f.write((char*)&head, INT);
@@ -536,9 +541,10 @@ private:
                     f.read((char*)&first, INT);
 
                     value_type temp;
-                    f.seekg(first + 2 * INT, std::ios::beg);
-                    f.read((char*)&temp, VALUE);
+                    f.seekg(first + 2 * INT + VALUE, std::ios::beg);
                     f.read((char*)&second, INT);
+                    f.seekg(second + 2 * INT, std::ios::beg);
+                    f.read((char*)&temp, VALUE);
                     Key second_key(temp.first);
 
                     --right_count;
@@ -546,6 +552,10 @@ private:
                     f.write((char*)&right_count, INT);
                     f.seekp(INT + VALUE, std::ios::cur);
                     f.write((char*)&second, INT);
+
+                    ++count;
+                    f.seekp(pos, std::ios::beg);
+                    f.write((char*)&count, INT);
 
                     f.seekp(second + INT, std::ios::beg);
                     f.write((char*)&right_d, INT);
@@ -557,10 +567,8 @@ private:
                     f.seekp(VALUE, std::ios::cur);
                     f.write((char*)&nega_one, INT);
 
-                    int pointer = -second - 1;
                     file[1].seekp(right_p + 2 * INT, std::ios::beg);
                     file[1].write((char*)&second_key, KEY);
-                    file[1].write((char*)&pointer, INT);
                     return;
                 }
                 else {
@@ -630,14 +638,13 @@ private:
 
                     updateDataNode(file[2], pos, end, to_key);
 
-                    value_type temp; int pointer = -end - 1;
+                    value_type temp;
                     f.seekg(end + 2 * INT, std::ios::beg);
                     f.read((char*)&temp, VALUE);
                     Key new_key(temp.first);
 
                     file[1].seekp(parent + 2 * INT, std::ios::beg);
                     file[1].write((char*)&new_key, KEY);
-                    file[1].write((char*)&pointer, INT);
                     return;
                 }
                 else {
@@ -1020,6 +1027,57 @@ public:
         sjtu::vector<T> temp = Find(key);
         if (temp.empty()) return std::pair<bool, T>(false, T());
         else return std::pair<bool, T>(true, temp.front());
+    }
+
+    void print() {
+        std::cout << std::endl << Size << std::endl;
+
+        std::queue<int> que;
+        que.push(root);
+
+        while (que.front() >= 0) {
+            Key temp;
+
+            int cur = que.front(), count;
+            que.pop();
+
+            file[1].seekg(cur, std::ios::beg);
+            file[1].read((char*)&count, INT);
+            std::cout << count << std::endl;
+
+            int next_pos = cur, pointer;
+            do {
+                file[1].seekg(next_pos + 2 * INT, std::ios::beg);
+                file[1].read((char*)&temp, KEY);
+                file[1].read((char*)&pointer, INT);
+                file[1].read((char*)&next_pos, INT);
+                que.push(pointer);
+                std::cout << temp << ' ';
+            } while (next_pos != -1);
+            std::cout << std::endl;
+        }
+        std::cout << std::endl;
+
+        while (!que.empty()) {
+            value_type temp;
+
+            int cur = -que.front() - 1, count;
+            que.pop();
+
+            file[2].seekg(cur, std::ios::beg);
+            file[2].read((char*)&count, INT);
+            file[2].seekg(cur + 2 * INT + VALUE, std::ios::beg);
+            file[2].read((char*)&cur, INT);
+            std::cout << count << std::endl;
+
+            do {
+                file[2].seekg(cur + 2 * INT, std::ios::beg);
+                file[2].read((char*)&temp, VALUE);
+                file[2].read((char*)&cur, INT);
+                std::cout << temp.first << ' ';
+            } while (cur != -1);
+            std::cout << std::endl;
+        }
     }
 };
 
