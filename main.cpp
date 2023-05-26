@@ -1,8 +1,8 @@
 #include <iostream>
 #include <cstdio>
 #include <cstring>
-#include "vector.hpp"
 #include "bptree.hpp"
+#include "vector.hpp"
 
 struct String {
     char index[65];
@@ -44,30 +44,32 @@ struct String {
 };
 
 int main() {
+    std::ios::sync_with_stdio(false);
+    std::cin.tie(0); std::cout.tie(0);
     // freopen("5.in","r",stdin);
     // freopen("me.out","w",stdout);
     BPTree<String, int, 10, 10> bpTree("test");
     std::pair<String, int> val;
     int cnt;
     char cmd[10];
-    scanf("%d", &cnt);
+    std::cin >> cnt;
     for (int i = 1; i <= cnt; i++) {
-        scanf("%s", cmd);
+        std::cin >> cmd;
         if (cmd[0] == 'i') {
-            scanf("%s%d", val.first.index, &val.second);
+            std::cin >> val.first.index >> val.second;
             bpTree.insert(val);
         }
         else if (cmd[0] == 'f') {
-            scanf("%s", val.first.index);
+            std::cin >> val.first.index;
             sjtu::vector<int> ans = bpTree.Find(val.first);
             if (!ans.empty()) {
-                for (int i = 0; i < ans.size() - 1; i++) printf("%d ", ans[i]);
-                printf("%d\n", ans[ans.size() - 1]);
+                for (int i = 0; i < ans.size() - 1; i++) std::cout << ans[i] << ' ';
+                std::cout << ans[ans.size() - 1] << '\n';
             }
-            else puts("null");
+            else std::cout << "null\n";
         }
         else if (cmd[0] == 'd') {
-            scanf("%s%d", val.first.index, &val.second);
+            std::cin >> val.first.index >> val.second;
             bpTree.remove(val);
         }
     }
