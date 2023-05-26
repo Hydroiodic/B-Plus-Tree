@@ -956,9 +956,12 @@ public:
     }
 
     ~BPTree() {
+        updateinfo();
         file[0].close();
         file[1].close();
         file[2].close();
+        file[3].close();
+        file[4].close();
     }
 
     int size() {
@@ -968,7 +971,7 @@ public:
     void insert(const std::pair<Key, T>& val) {
         int pos = findInTree(root, val);
         insertToData(pos, val);
-        updateinfo();
+        //updateinfo();
     }
 
     sjtu::vector<T> Find(const Key& key) {
@@ -978,7 +981,7 @@ public:
     void remove(const std::pair<Key, T>& val) {
         int pos = findInTree(root, val);
         removeData(pos, val);
-        updateinfo();
+        //updateinfo();
     }
 
     // reset the state of BPT
