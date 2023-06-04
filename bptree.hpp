@@ -1,8 +1,8 @@
 #ifndef BPTREE_HPP_BPTREE2_HPP
 #define BPTREE_HPP_BPTREE2_HPP
 #include <fstream>
-//#include <iostream>
-//#include <queue>
+#include <iostream>
+#include <queue>
 #include "vector.hpp"
 template <class Key, class T, int M = 100, int L = 100>
 class BPTree {
@@ -435,7 +435,7 @@ private:
                 checkTreeNode(file[1], ancestor);
             }
         }
-        else if (count < splitPos) {
+        else if (count < L / 3) {
             int left_p, right_p, left_d, right_d;
             file[1].seekg(parent + INT, std::ios::beg);
             file[1].read((char*)&left_p, INT);
@@ -459,7 +459,7 @@ private:
                 f.seekg(right_d, std::ios::beg);
                 f.read((char*)&right_count, INT);
 
-                if (right_count > splitPos) {
+                if (right_count > L / 3) {
                     int first, second;
                     f.seekg(right_d + 2 * INT + VALUE, std::ios::beg);
                     f.read((char*)&first, INT);
@@ -529,7 +529,7 @@ private:
                     f.seekp(pos, std::ios::beg);
                     f.write((char*)&count, INT);
 
-                    if (parent_count < splitPos) {
+                    if (parent_count < M / 3) {
                         checkTreeNode(file[1], ancestor);
                     }
                     return;
@@ -552,7 +552,7 @@ private:
                 f.seekg(left_d, std::ios::beg);
                 f.read((char*)&left_count, INT);
 
-                if (left_count > splitPos) {
+                if (left_count > L / 3) {
                     f.seekg(end + INT, std::ios::beg);
                     f.read((char*)&p, INT);
                     f.seekp(end + 3 * INT + VALUE, std::ios::beg);
@@ -606,7 +606,7 @@ private:
                     f.seekp(left_d, std::ios::beg);
                     f.write((char*)&count, INT);
 
-                    if (parent_count < splitPos) {
+                    if (parent_count < M / 3) {
                         checkTreeNode(file[1], ancestor);
                         return;
                     }
@@ -685,7 +685,7 @@ private:
                 checkTreeNode(f, ancestor);
             }
         }
-        else if (count < splitPos && pos != root) {
+        else if (count < M / 3 && pos != root) {
             int left_p, right_p, left_d, right_d;
             f.seekg(parent + INT, std::ios::beg);
             f.read((char*)&left_p, INT);
@@ -708,7 +708,7 @@ private:
                 f.seekg(right_d, std::ios::beg);
                 f.read((char*)&right_count, INT);
 
-                if (right_count > splitPos) {
+                if (right_count > M / 3) {
                     int first;
                     f.seekg(right_d + 2 * INT + VALUE, std::ios::beg);
                     f.read((char*)&first, INT);
@@ -788,7 +788,7 @@ private:
                     f.seekp(pos, std::ios::beg);
                     f.write((char*)&count, INT);
 
-                    if (parent_count < splitPos) {
+                    if (parent_count < M / 3) {
                         checkTreeNode(file[1], ancestor);
                     }
                     return;
@@ -810,7 +810,7 @@ private:
                 f.seekg(left_d, std::ios::beg);
                 f.read((char*)&left_count, INT);
 
-                if (left_count > splitPos) {
+                if (left_count > M / 3) {
                     f.seekg(end + INT, std::ios::beg);
                     f.read((char*)&p, INT);
                     f.seekp(p + 2 * INT + VALUE, std::ios::beg);
@@ -874,7 +874,7 @@ private:
                     f.seekp(left_d, std::ios::beg);
                     f.write((char*)&count, INT);
 
-                    if (parent_count < splitPos) {
+                    if (parent_count < M / 3) {
                         checkTreeNode(file[1], ancestor);
                         return;
                     }
@@ -971,7 +971,6 @@ public:
     void insert(const std::pair<Key, T>& val) {
         int pos = findInTree(root, val);
         insertToData(pos, val);
-        //updateinfo();
     }
 
     sjtu::vector<T> Find(const Key& key) {
@@ -981,7 +980,6 @@ public:
     void remove(const std::pair<Key, T>& val) {
         int pos = findInTree(root, val);
         removeData(pos, val);
-        //updateinfo();
     }
 
     // reset the state of BPT
@@ -1032,7 +1030,7 @@ public:
         else return std::pair<bool, T>(true, temp.front());
     }
 
-    /*void print() {
+    void print() {
         std::cout << std::endl << Size << std::endl;
 
         std::queue<int> que;
@@ -1083,7 +1081,7 @@ public:
             }
             std::cout << std::endl;
         }
-    }*/
+    }
 };
 
 #endif //BPTREE_HPP_BPTREE2_HPP
